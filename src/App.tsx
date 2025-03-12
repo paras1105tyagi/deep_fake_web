@@ -5,6 +5,8 @@ import { ResultDisplay } from './components/ResultDisplay';
 import type { DetectionStatus, DetectionResult } from './types';
 import axios from "axios";
 
+const API_BASE_URL ="https://deepfake-api-c598.onrender.com";
+
 function App() {
   const [image, setImage] = useState<string | null>(null);
   const [status, setStatus] = useState<DetectionStatus>('idle');
@@ -13,7 +15,7 @@ function App() {
   const handleImageSelect = useCallback(async (file: File) => {
     try {
       setStatus('uploading');
-      
+
       // Create image preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -21,23 +23,26 @@ function App() {
       };
       reader.readAsDataURL(file);
 
-      // Prepare form data for API
+      // Prepare form data
       const formData = new FormData();
       formData.append('file', file);
 
-      // Make API call
+      // Make API request
       setStatus('processing');
-      const response = await axios.post("/api/predict", formData);
+      const response = await axios.post(`${API_BASE_URL}/predict`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-      const data = response.data; // Axios returns `data` directly
+      const data = response.data;
 
       setStatus('complete');
       setResult({
-        isReal: data.prediction.toLowerCase() === 'real', // Case-sensitive fix
-        confidence: data.confidence || 0.95 // Default confidence
+        isReal: data.prediction.toLowerCase() === 'real', // Case-insensitive check
+        confidence: data.confidence || 0.95, // Default confidence if missing
       });
     } catch (error) {
-      console.error('Error processing image:', error);
+      console.error("API Error:", error);
+
       setStatus('error');
     }
   }, []);
@@ -51,7 +56,6 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-blue-900 animate-gradient text-white p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <header className="text-center mb-12">
           <div className="inline-flex items-center justify-center gap-3 mb-6">
             <Shield className="w-12 h-12 text-blue-400" />
@@ -75,13 +79,11 @@ function App() {
           </div>
         </header>
 
-        {/* Main Content */}
         <div className="glass-effect rounded-3xl p-8 sm:p-10 shadow-2xl">
           {status === 'idle' ? (
             <UploadZone onImageSelect={handleImageSelect} />
           ) : (
             <div className="space-y-8">
-              {/* Image Preview */}
               <div className="relative rounded-2xl overflow-hidden bg-black/30 shadow-xl">
                 {image && (
                   <img
@@ -90,8 +92,7 @@ function App() {
                     className="w-full h-[400px] object-contain"
                   />
                 )}
-                
-                {/* Loading Overlay */}
+
                 {(status === 'uploading' || status === 'processing') && (
                   <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
                     <div className="text-center">
@@ -112,10 +113,8 @@ function App() {
                 )}
               </div>
 
-              {/* Results */}
               {status === 'complete' && <ResultDisplay result={result} />}
 
-              {/* Error State */}
               {status === 'error' && (
                 <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-xl text-center">
                   <p className="text-xl font-semibold text-red-300 mb-2">Analysis Failed</p>
@@ -125,7 +124,6 @@ function App() {
                 </div>
               )}
 
-              {/* Reset Button */}
               <div className="text-center pt-6">
                 <button
                   onClick={handleReset}
@@ -139,7 +137,6 @@ function App() {
           )}
         </div>
 
-        {/* Features Section */}
         <div className="mt-16 grid sm:grid-cols-3 gap-6">
           <div className="glass-effect rounded-xl p-6 text-center">
             <h3 className="text-lg font-semibold text-blue-300 mb-2">Real-time Detection</h3>
@@ -155,7 +152,6 @@ function App() {
           </div>
         </div>
 
-        {/* Footer */}
         <footer className="mt-12 text-center text-blue-200/60 text-sm">
           <p>Powered by advanced deep learning technology • © 2025 DeepGuard</p>
         </footer>
